@@ -6,7 +6,11 @@ import os
 import pathlib
 import stat
 import sys
-import win32security
+try:
+  # Only for Windows
+  import win32security
+except ModuleNotFoundError:
+  pass
 
 @dataclasses.dataclass
 class Names:
@@ -28,11 +32,12 @@ def put_message(message):
   print(message)
 
 def version():
-  #return f'1.0.0 for Python 3.x or later; (Tested for Python 3.9.1 on MacBook Pro)'
-  return f'1.0.1 for Python 3.x or later; (Tested for Python 3.7.4 on Windows 10 Pro 21H1)'
+  #return f'1.0.0 (2022/08/28) for Python 3.x or later; (Tested for Python 3.9.1 on MacBook Pro)'
+  # return f'1.0.1 (2022/08/29) for Python 3.x or later; (Tested for Python 3.7.4 on Windows 10 Pro 21H1)'
+  return f'1.0.2 (2022/08/29) for Python 3.x or later; (Tested for Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro)'
 
 def copyright():
-  return f'Copyright© 2022/08/28, kimura.shinichi@ieee.org'
+  return f'Copyright© 2022, kimura.shinichi@ieee.org'
 
 def license():
   return f'Licensed by Apache License 2.0( {apache_license_url()} ) or later.'
