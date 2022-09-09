@@ -1,4 +1,4 @@
-import dataclasses
+# import dataclasses
 import datetime
 import glob
 import hashlib
@@ -12,10 +12,10 @@ try:
 except ModuleNotFoundError:
   pass
 
-@dataclasses.dataclass
-class Names:
-  unames: dict
-  gnames: dict
+# @dataclasses.dataclass
+# class Names:
+#   unames: dict
+#   gnames: dict
 
 def help(args):
   put_message(f'fileinfo - List File attributes')
@@ -34,7 +34,8 @@ def put_message(message):
 def version():
   #return f'1.0.0 (2022/08/28) for Python 3.x or later; (Tested for Python 3.9.1 on MacBook Pro)'
   # return f'1.0.1 (2022/08/29) for Python 3.x or later; (Tested for Python 3.7.4 on Windows 10 Pro 21H1)'
-  return f'1.0.2 (2022/08/29) for Python 3.x or later; (Tested for Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro)'
+  # return f'1.0.2 (2022/08/29) for Python 3.x or later; (Tested for Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro)'
+  return f'1.0.3 (2022/08/30) for Python 3.x or later; (Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro)'
 
 def copyright():
   return f'Copyright© 2022, kimura.shinichi@ieee.org'
@@ -50,7 +51,8 @@ def main(args) -> int:
     help(args)
     return 1
 
-  names = Names(unames={}, gnames={})
+  # names = Names(unames={}, gnames={})
+  names = {'unames':{}, 'gnames':{}}
   for f in args[1:]:
     dir_stat_invisibly(f, names)
     show(f, names)
@@ -106,9 +108,10 @@ def stat_str(file, names):
   nlink = s.st_nlink
   uid = s.st_uid
   path = pathlib.Path(file)
-  uname = get_uname(uid, path, names.unames)
+  # uname = get_uname(uid, path, names.unames)
+  uname = get_uname(uid, path, names['unames'])
   gid = s.st_gid
-  gname = get_gname(gid, path, names.gnames)
+  gname = get_gname(gid, path, names['gnames'])
   size = s.st_size
   hash = get_hash(file, mode)
   mtime = as_Ymd_HMS(s.st_mtime)
@@ -175,7 +178,10 @@ def get_hash(file, mode):
 
 def get_link_symbol(path):
   if os.path.islink(path):
-    link = f' -> {os.readlink(path)}'
+    try:
+      link = f' -> {os.readlink(path)}'
+    except FileNotFoundError:
+      link = f' -> (No such file or directory)'
   else:
     link = ''
   return link
@@ -192,23 +198,38 @@ def sha256(file, mode):
     return sha256_hex(file)
   elif 'd' == mode[0]:
     return f'directory'
+  elif 'D' == mode[0]:
+    return f'Door(Solaris)'
   elif 'b' == mode[0]:
     return f'block-special'
   elif 'c' == mode[0]:
     return f'character-special'
+  elif 'C' == mode[0]:
+    return f'Contiguous-data' # high performance ("contiguous data") file
   elif 'l' == mode[0]:
     return f'symbolic-link'
+  elif 'M' == mode[0]:
+    return f'Migrated' # off-line ("migrated") file (Cray DMF)
+  elif 'n' == mode[0]:
+    return f'network special' # (HP-UX)
   elif 's' == mode[0]:
     return f'socket'
   elif 'P' == mode[0]:
     return f'FIFO'
+  elif 'p' == mode[0]:
+    return f'FIFO'
+  elif '?' == mode[0]:
+    return f'some-other-file-type'
   else:
     raise TypeError(f'{mode[0]}: Unknown mode prefix of file: {file}')
 
 def sha256_hex(file):
   m = hashlib.sha256()
   with open(file, 'rb') as f:
-    bytes = f.read()
+    try:
+        bytes = f.read()
+    except OSError as e:
+      return f'(unreadable)'
     m.update(bytes)
   hex = m.hexdigest()
   return hex
