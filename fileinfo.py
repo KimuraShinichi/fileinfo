@@ -6,6 +6,7 @@ import os
 import pathlib
 import stat
 import sys
+import win32security
 
 @dataclasses.dataclass
 class Names:
@@ -27,7 +28,8 @@ def put_message(message):
   print(message)
 
 def version():
-  return f'1.0.0 for Python 3.x or later; (Tested for Python 3.9.1 on MacBook Pro)'
+  #return f'1.0.0 for Python 3.x or later; (Tested for Python 3.9.1 on MacBook Pro)'
+  return f'1.0.1 for Python 3.x or later; (Tested for Python 3.7.4 on Windows 10 Pro 21H1)'
 
 def copyright():
   return f'Copyright© 2022/08/28, kimura.shinichi@ieee.org'
@@ -109,10 +111,45 @@ def stat_str(file, names):
   return f'{mode} {nlink} {uname}({uid}):{gname}({gid}) {size} {hash} {mtime} {path}{link}'
 
 def get_uname(uid, path, unames):
-  return get_xname(uid, path.owner, unames)
+  return get_xname(uid, (lambda: get_owner(path)), unames)
+
+def get_owner(path):
+    try:
+      xname = path.owner()
+    except KeyError:
+      xname = '(missing)'
+    except NotImplementedError:
+      # Try for Windows.
+      try:
+        sd = win32security.GetFileSecurity(str(path), win32security.OWNER_SECURITY_INFORMATION)
+        owner_sid = sd.GetSecurityDescriptorOwner()
+        name, domain, type = win32security.LookupAccountSid(None, owner_sid)
+        xname = name
+      except Exception as e:
+        raise e
+    return xname
 
 def get_gname(gid, path, gnames):
-  return get_xname(gid, path.group, gnames)
+  return get_xname(gid, (lambda: get_group(path)), gnames)
+
+def get_group(path):
+    try:
+      xname = path.group()
+    except KeyError:
+      xname = '(missing)'
+    except NotImplementedError:
+      # Try for Windows.
+      try:
+        sd = win32security.GetFileSecurity(str(path), win32security.OWNER_SECURITY_INFORMATION)
+        group_sid = sd.GetSecurityDescriptorGroup()
+        if group_sid is not None:
+          name, domain, type = win32security.LookupAccountSid(None, group_sid)
+          xname = name
+        else:
+          xname = None
+      except Exception as e:
+        raise e
+    return xname
 
 def get_xname(xid, fun, xnames):
   if xid in xnames:
@@ -122,7 +159,10 @@ def get_xname(xid, fun, xnames):
       xname = fun()
     except KeyError:
       xname = '(missing)'
-    xnames[xid] = xname
+    except NotImplementedError:
+      xname = '(not-implemented)'
+    if xname is not None:
+      xnames[xid] = xname
   return xname
 
 def get_hash(file, mode):
