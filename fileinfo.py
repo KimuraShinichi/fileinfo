@@ -44,10 +44,14 @@ def fileinfo_version():
     # return f'1.0.3 (2022/08/30) for Python 3.x or later; \
     # (Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, \
     # Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro)'
-    return f'1.0.4 (2022/09/17) for Python 3.x or later; \
-        (Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, \
-        Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro; \
-        Source indentation by 4 spaces.)'
+    # return f'1.0.4 (2022/09/17) for Python 3.x or later; '\
+    #    + f'(Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, '\
+    #    + f'Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro; '\
+    #    + f'Source indentation by 4 spaces.)'
+    return f'1.0.5 (2022/09/18) for Python 3.x or later; '\
+        + f'(Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, '\
+        + f'Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro; '\
+        + f'Clean for PyLint[except 1 E0401].)'
 
 def fileinfo_copyright():
     """Returns the copyright notification."""
