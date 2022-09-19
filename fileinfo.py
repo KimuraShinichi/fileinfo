@@ -33,23 +33,37 @@ class FileInfo:
         """Parses argv and retuens parser and parsed args."""
         parser = argparse.ArgumentParser(
                 prog='fileinfo.py',
-                description='List File attributes'
+                description='''
+                List File Information.
+
+                This program lists following attributes for each files in FileEntries.
+                file stat attributes as like as Linux/UNIX ls -l command and SHA-256 hash.
+                (
+                    access-mode[file-type;user-mode(rwx);group-mode(rwx);world-mode(rwx)],
+                    number of file-links,
+                    user(uid):group(gid),
+                    size in bytes,
+                    SHA-256 hash,
+                    last modified date-time[YYYY/mm/dd-HH:MM:SS],
+                    path name( -> symbolic link reference in Linux/UNIX)
+                )
+                '''
             )
         parser.add_argument('FileEntry', nargs='*',
             help='File or Directory, '
             'both absolute path and relative path are acceptable.')
-        parser.add_argument('-v', '--version', action='store_true',
+        parser.add_argument('-V', '--version', action='store_true',
             help='show version and exit')
-        parser.add_argument('-c', '--copyright', action='store_true',
+        parser.add_argument('-C', '--copyright', action='store_true',
             help='show copyright and exit')
         parser.add_argument('-L', '--licence', action='store_true',
             help='show licence and exit')
         parser.add_argument('-r', '--recursive', action='store_true',
             help='process recursively into sub directories')
         parser.add_argument('-x', '--excludes',
-            help='process skipping the specified sub directories and its children')
+            help='process skipping the specified semicolon-separated sub-directories and its children. (e.g. -x ".git;.svn")')
         parser.add_argument('-o', '--output',
-            help='output file information list into the specified file')
+            help='output file information list into the specified file. (e.g. `-o fileinfo.out\' or `--output /tmp/out.txt\')')
         parser.add_argument('-f', '--force', action='store_true',
             help='force to output even if the output file is exists')
         args = vars(parser.parse_args(argv[1:]))
@@ -88,10 +102,10 @@ class FileInfo:
     @classmethod
     def _version(cls):
         """Returns the version message."""
-        return '1.0.10 (2022/09/19) for Python 3.x or later; '\
+        return '1.0.11 (2022/09/19) for Python 3.x or later; '\
             + '(Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, '\
             + 'Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro; '\
-            + 'Added optional args -o, --output and -f, --force.)'
+            + 'Refine arg spec and format for file modified-time.)'
 
     @classmethod
     def _copyright(cls):
@@ -360,7 +374,7 @@ class FileInfo:
     def _as_datetime_style(timestamp):
         """Returns the text representation of the timestamp."""
         a_datetime = FileInfo._datetime_of(timestamp)
-        return a_datetime.strftime('%Y/%m/%d %H:%M:%S')
+        return a_datetime.strftime('%Y/%m/%d-%H:%M:%S')
 
     @staticmethod
     def _datetime_of(timestamp):
