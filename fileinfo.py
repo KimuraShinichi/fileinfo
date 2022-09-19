@@ -34,7 +34,7 @@ class FileInfo:
                 prog='fileinfo.py',
                 description='List File attributes'
             )
-        parser.add_argument('FileEntry', nargs='+',
+        parser.add_argument('FileEntry', nargs='*',
             help='File or Directory, '
             'both absolute path and relative path are acceptable.')
         parser.add_argument('-v', '--version', action='store_true',
@@ -45,6 +45,8 @@ class FileInfo:
             help='show licence and exit')
         parser.add_argument('-r', '--recursive', action='store_true',
             help='process recursively into sub directories')
+        parser.add_argument('-x', '--excludes',
+            help='process skipping the specified sub directories and its children')
         args = vars(parser.parse_args(argv[1:]))
         return parser, args
 
@@ -81,10 +83,10 @@ class FileInfo:
     @classmethod
     def _version(cls):
         """Returns the version message."""
-        return '1.0.8 (2022/09/19) for Python 3.x or later; '\
+        return '1.0.9 (2022/09/19) for Python 3.x or later; '\
             + '(Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, '\
             + 'Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro; '\
-            + 'Parsed arguments by (genuine) argparse.)'
+            + 'Added optional argument -x, --excludes.)'
 
     @classmethod
     def _copyright(cls):
@@ -100,6 +102,10 @@ class FileInfo:
     def _apache_licence_url(cls):
         """Returns the URL of The Apache Software Licence 2.0."""
         return 'https://www.apache.org/licenses/LICENSE-2.0'
+
+    def _warn(self, *message):
+        concatenated = ' '.join(message)
+        print(f'WARNING: {concatenated}', file=sys.stderr)
 
     def _check_optional_args(self, args):
         """Returns go(True) or no-go(False) judged by optional args."""
@@ -158,13 +164,17 @@ class FileInfo:
             # Do not follow any symbolic links.
             if os.path.islink(file_path):
                 return
-
+            
             a_directory = file_path
             try:
                 # Show about all the children of a_directory.
                 children = a_directory.glob('*')
-
+                exs = self.args['excludes']
+                excludes_list = str(exs).split(';')
                 for child in children:
+                    if child.name in excludes_list:
+                        self._warn(f'Skiping sub-directory {child}')
+                        continue
                     try:
                         child_path = f'{child}'
                         self._show(child_path, names)
