@@ -22,6 +22,7 @@ class FileInfo:
     def __init__(self, argv) -> None:
         """Initialize this instance."""
         self.parser, self.args = FileInfo._parse_args(argv)
+        self.my_out = sys.stdout
 
     def __repr__(self) -> str:
         """Returns instantiating representation."""
@@ -47,6 +48,10 @@ class FileInfo:
             help='process recursively into sub directories')
         parser.add_argument('-x', '--excludes',
             help='process skipping the specified sub directories and its children')
+        parser.add_argument('-o', '--output',
+            help='output file information list into the specified file')
+        parser.add_argument('-f', '--force', action='store_true',
+            help='force to output even if the output file is exists')
         args = vars(parser.parse_args(argv[1:]))
         return parser, args
 
@@ -83,10 +88,10 @@ class FileInfo:
     @classmethod
     def _version(cls):
         """Returns the version message."""
-        return '1.0.9 (2022/09/19) for Python 3.x or later; '\
+        return '1.0.10 (2022/09/19) for Python 3.x or later; '\
             + '(Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, '\
             + 'Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro; '\
-            + 'Added optional argument -x, --excludes.)'
+            + 'Added optional args -o, --output and -f, --force.)'
 
     @classmethod
     def _copyright(cls):
@@ -107,6 +112,10 @@ class FileInfo:
         concatenated = ' '.join(message)
         print(f'WARNING: {concatenated}', file=sys.stderr)
 
+    def _error(self, *message):
+        concatenated = ' '.join(message)
+        print(f'ERROR: {concatenated}', file=sys.stderr)
+
     def _check_optional_args(self, args):
         """Returns go(True) or no-go(False) judged by optional args."""
         if args['version']:
@@ -124,7 +133,13 @@ class FileInfo:
         return True
 
     def run(self) -> int:
-        """The main program entrance."""
+        """
+        The main program entrance.
+
+        Returns 0 if it ends normally.
+        Returns 1 if it ends by help.
+        Returns 2 if it ends abnormally.
+        """
         parser, args = self.parser, self.args
         go_ahead = self._check_optional_args(args)
         if not go_ahead:
@@ -135,11 +150,47 @@ class FileInfo:
             self._print_help(parser)
             return 1
 
+        output_file = args['output']
+        ret = 0
+        if output_file is None:
+            ret = self._try_to_show(files, output_file=None)
+        elif os.path.exists(output_file):
+            if os.access(output_file, os.W_OK):
+                if args['force']:
+                    ret = self._try_to_show(files, output_file=output_file)
+                else:
+                    self._error(
+                        f'Already exists the output file: {output_file}: '
+                        '(Use -f option to overwrite)')
+                    ret = 2
+            else:
+                self._error(f'The output file is not a writable: {output_file}')
+                ret = 2
+        else:
+            ret = self._try_to_show(files, output_file=output_file)
+        return ret
+
+    def _show_all(self, files, out):
+        self.my_out = out
         names = {'unames':{}, 'gnames':{}}
         for file in files:
             self._dir_stat_invisibly(file, names)
             self._show(file, names)
-        return 0
+
+    def _try_to_show(self, files, output_file):
+        if output_file is None:
+            self._show_all(files, sys.stdout)
+            return 0
+
+        try:
+            with open(file=output_file, mode='w', encoding='UTF-8') as my_out:
+                self._show_all(files, my_out)
+            return 0
+        except IOError as io_error:
+            self._error(f'Failed to write: {output_file}: {io_error}')
+            return 2
+        finally:
+            self.my_out = sys.stdout
 
     def _dir_stat_invisibly(self, file, names):
         """
@@ -154,7 +205,7 @@ class FileInfo:
 
     def _show(self, file, names):
         """Show the fileinfo of the file and / or its children."""
-        FileInfo._put_fileinfo(self._stat_str(file, names))
+        self._put_fileinfo(self._stat_str(file, names))
 
         if not self.args['recursive']:
             return
@@ -164,7 +215,6 @@ class FileInfo:
             # Do not follow any symbolic links.
             if os.path.islink(file_path):
                 return
-            
             a_directory = file_path
             try:
                 # Show about all the children of a_directory.
@@ -179,14 +229,13 @@ class FileInfo:
                         child_path = f'{child}'
                         self._show(child_path, names)
                     except PermissionError:
-                        FileInfo._put_fileinfo(f'(Skipping {child_path})')
+                        self._put_fileinfo(f'(Skipping {child_path})')
             except PermissionError:
-                FileInfo._put_fileinfo(f'(Skipping children of {a_directory})')
+                self._put_fileinfo(f'(Skipping children of {a_directory})')
 
-    @staticmethod
-    def _put_fileinfo(fileinfo_str):
+    def _put_fileinfo(self, fileinfo_str):
         """Put a file-info string to the standard out."""
-        print(fileinfo_str)
+        print(fileinfo_str, file=self.my_out)
 
     @staticmethod
     def _stat_str(file, names):
