@@ -1,6 +1,7 @@
 """
 Generates file information text list such as the output of UNIX/Linux ls -l.
 """
+from tmp import argparsex as argparse
 import datetime
 import hashlib
 import os
@@ -18,25 +19,44 @@ if only_for_windows():
 
 class FileInfo:
     """Class of File Information."""
-    def __init__(self) -> None:
+    def __init__(self, argv) -> None:
         """Initialize this instance."""
+        self.parser, self.args = FileInfo._parse_args(argv)
 
     def __repr__(self) -> str:
         """Returns instantiating representation."""
-        return f'FileInfo()'
+        return 'FileInfo()'
 
     @classmethod
-    def fileinfo_help(cls, args):
+    def _parse_args(cls, argv):
+        """Parses argv and retuens parser and parsed args."""
+        parser = argparse.ArgumentParser(
+                prog='fileinfo.py',
+                description='List File attributes'
+            )
+        parser.add_argument('FileEntry', nargs='+',
+            help='File or Directory, '
+            'both absolute path and relative path are acceptable.')
+        parser.add_argument('-v', '--version', action='store_true',
+            help='show version and exit')
+        parser.add_argument('-c', '--copyright', action='store_true',
+            help='show copyright and exit')
+        parser.add_argument('-L', '--licence', action='store_true',
+            help='show licence and exit')
+        parser.add_argument('-r', '--recursive', action='store_true',
+            help='process recursively into sub directories')
+        args = vars(parser.parse_args(argv[1:]))
+        return parser, args
+
+    @classmethod
+    def _print_help(cls, parser: argparse.ArgumentParser):
         """Show help message."""
-        FileInfo._put_message(f'fileinfo - List File attributes')
-        FileInfo._put_message(f'[VERSION]')
-        FileInfo._put_message(f'  {FileInfo._version()}')
-        FileInfo._put_message(f'[COPYRIGHT]')
-        FileInfo._put_message(f'  {FileInfo._copyright()}')
-        FileInfo._put_message(f'[LICENSE]')
-        FileInfo._put_message(f'  {FileInfo._license()}')
-        FileInfo._put_message(f'[SYNOPSIS]')
-        FileInfo._put_message(f'  {args[0]} [ File | Directory ]...')
+        FileInfo._put_message(parser.format_help())
+        FileInfo._print_version()
+        FileInfo._put_message('')
+        FileInfo._print_copyright()
+        FileInfo._put_message('')
+        FileInfo._print_licence()
 
     @staticmethod
     def _put_message(message):
@@ -44,38 +64,75 @@ class FileInfo:
         print(message)
 
     @classmethod
+    def _print_version(cls):
+        FileInfo._put_message('version:')
+        FileInfo._put_message(f'  {FileInfo._version()}')
+
+    @classmethod
+    def _print_copyright(cls):
+        FileInfo._put_message('copyright:')
+        FileInfo._put_message(f'  {FileInfo._copyright()}')
+
+    @classmethod
+    def _print_licence(cls):
+        FileInfo._put_message('licence:')
+        FileInfo._put_message(f'  {FileInfo._licence()}')
+
+    @classmethod
     def _version(cls):
         """Returns the version message."""
-        return f'1.0.6 (2022/09/18) for Python 3.x or later; '\
-            + f'(Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, '\
-            + f'Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro; '\
-            + f'Introduced the class FileInfo.)'
+        return '1.0.7 (2022/09/19) for Python 3.x or later; '\
+            + '(Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, '\
+            + 'Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro; '\
+            + 'Parsed arguments by argparse.)'
 
     @classmethod
     def _copyright(cls):
         """Returns the copyright notification."""
-        return f'Copyright© 2022, kimura.shinichi@ieee.org'
+        return 'Copyright© 2022, kimura.shinichi@ieee.org'
 
     @classmethod
-    def _license(cls):
-        """Returns the license notification."""
-        return f'Licensed by Apache License 2.0( {FileInfo._apache_license_url()} ) or later.'
+    def _licence(cls):
+        """Returns the licence notification."""
+        return f'Licenced by Apache License 2.0( {FileInfo._apache_licence_url()} ) or later.'
 
     @classmethod
-    def _apache_license_url(cls):
+    def _apache_licence_url(cls):
         """Returns the URL of The Apache Software Licence 2.0."""
-        return f'https://www.apache.org/licenses/LICENSE-2.0'
+        return 'https://www.apache.org/licenses/LICENSE-2.0'
 
-    def run(self, args) -> int:
+    def _check_optional_args(self, args):
+        """Returns go(True) or no-go(False) judged by optional args."""
+        if args['version']:
+            FileInfo._print_version()
+            return False
+
+        if args['copyright']:
+            FileInfo._print_copyright()
+            return False
+
+        if args['licence']:
+            FileInfo._print_licence()
+            return False
+
+        return True
+
+    def run(self) -> int:
         """The main program entrance."""
-        if len(args) < 2:
-            self.fileinfo_help(args)
+        parser, args = self.parser, self.args
+        go_ahead = self._check_optional_args(args)
+        if not go_ahead:
+            return 1
+
+        files = args['FileEntry']
+        if len(files) < 1:
+            self._print_help(parser)
             return 1
 
         names = {'unames':{}, 'gnames':{}}
-        for arg in args[1:]:
-            self._dir_stat_invisibly(arg, names)
-            self._show(arg, names)
+        for file in files:
+            self._dir_stat_invisibly(file, names)
+            self._show(file, names)
         return 0
 
     def _dir_stat_invisibly(self, file, names):
@@ -92,6 +149,9 @@ class FileInfo:
     def _show(self, file, names):
         """Show the fileinfo of the file and / or its children."""
         FileInfo._put_fileinfo(self._stat_str(file, names))
+
+        if not self.args['recursive']:
+            return
 
         file_path = pathlib.Path(file)
         if os.path.isdir(file_path):
@@ -143,9 +203,9 @@ class FileInfo:
             'mtime': FileInfo._as_datetime_style(stat_info.st_mtime),
             'link': FileInfo._get_link_symbol(path)
         }
-        return '{0[mode]} {0[nlink]} ' \
-            '{0[uname]}({0[uid]}):{0[gname]}({0[gid]}) ' \
-            '{0[size]} {0[hash]} {0[mtime]} {0[path]}{0[link]}'.format(dic)
+        return ('{0[mode]} {0[nlink]} ' \
+            + '{0[uname]}({0[uid]}):{0[gname]}({0[gid]}) ' \
+            + '{0[size]} {0[hash]} {0[mtime]} {0[path]}{0[link]}').format(dic)
 
     @staticmethod
     def _get_uname(uid, path, unames):
@@ -232,7 +292,7 @@ class FileInfo:
             try:
                 link = f' -> {os.readlink(path)}'
             except FileNotFoundError:
-                link = f' -> (No such file or directory)'
+                link = ' -> (No such file or directory)'
         else:
             link = ''
         return link
@@ -271,7 +331,7 @@ class FileInfo:
             'p': 'FIFO',
             '?': 'some-other-file-type'
         }
-        if mode[0] in a_dict.keys():
+        if mode[0] in a_dict:
             return a_dict[mode[0]]
         raise TypeError(f'{mode[0]}: Unknown mode prefix of file: {file}')
 
@@ -283,12 +343,10 @@ class FileInfo:
             try:
                 its_bytes = a_file.read()
             except OSError:
-                return f'(unreadable)'
+                return '(unreadable)'
             a_hash.update(its_bytes)
         hexadecimal = a_hash.hexdigest()
         return hexadecimal
 
-# main(sys.argv)
 if __name__ == '__main__':
-    A_FILEINFO = FileInfo()
-    A_FILEINFO.run(sys.argv)
+    FileInfo(sys.argv).run()
