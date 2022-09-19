@@ -1,7 +1,7 @@
 """
 Generates file information text list such as the output of UNIX/Linux ls -l.
 """
-from tmp import argparsex as argparse
+import argparse
 import datetime
 import hashlib
 import os
@@ -81,10 +81,10 @@ class FileInfo:
     @classmethod
     def _version(cls):
         """Returns the version message."""
-        return '1.0.7 (2022/09/19) for Python 3.x or later; '\
+        return '1.0.8 (2022/09/19) for Python 3.x or later; '\
             + '(Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, '\
             + 'Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro; '\
-            + 'Parsed arguments by argparse.)'
+            + 'Parsed arguments by (genuine) argparse.)'
 
     @classmethod
     def _copyright(cls):
