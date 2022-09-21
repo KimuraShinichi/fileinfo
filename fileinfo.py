@@ -107,10 +107,10 @@ class FileInfo:
     @classmethod
     def _version(cls):
         """Returns the version message."""
-        return '1.0.12 (2022/09/19) for Python 3.x or later; '\
+        return '1.0.13 (2022/09/20) for Python 3.x or later; '\
             + '(Tested for Python 3.6.8 on Redhat Enterprise Linux 8.2, '\
             + 'Python 3.7.4 on Windows 10 Pro 21H1 and for Python 3.9.1 on MacBook Pro; '\
-            + 'Added counters for file entries.)'
+            + 'Added exception handling for unreadable file.)'
 
     @classmethod
     def _copyright(cls):
@@ -447,14 +447,14 @@ class FileInfo:
     def _sha256_hex(file):
         """Returns the hexadecimal text for SHA-256 hash value of the file."""
         a_hash = hashlib.sha256()
-        with open(file, 'rb') as a_file:
-            try:
+        try:
+            with open(file, 'rb') as a_file:
                 its_bytes = a_file.read()
-            except OSError:
-                return '(unreadable)'
-            a_hash.update(its_bytes)
-        hexadecimal = a_hash.hexdigest()
-        return hexadecimal
+                a_hash.update(its_bytes)
+            hexadecimal = a_hash.hexdigest()
+            return hexadecimal
+        except OSError:
+            return '(unreadable)'
 
 if __name__ == '__main__':
     FileInfo(sys.argv).run()
